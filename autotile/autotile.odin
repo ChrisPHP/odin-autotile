@@ -16,7 +16,7 @@ get_tile :: proc(x, y: int, grid: ^[]int) -> int {
     return grid[size]
 }
 
-get_autotile_bit :: proc(x, y, tile_num: int, grid: ^[]int) -> int {
+get_8bit_autotile_bit :: proc(x, y, tile_num: int, grid: ^[]int) -> int {
     bitmasks := [8]int{0,0,0,0,0,0,0,0}
     
     if get_tile(x, y-1, grid) == tile_num {
@@ -60,12 +60,12 @@ get_autotile_bit :: proc(x, y, tile_num: int, grid: ^[]int) -> int {
     return bitmasks[0] + bitmasks[1] + bitmasks[2] + bitmasks[3] + bitmasks[4] + bitmasks[5] + bitmasks[6] + bitmasks[7]
 }
 
-create_bit_mask :: proc(grid: ^[]int) {
+create_8bit_mask :: proc(grid: ^[]int) {
     for x in 0..<GRID_WIDTH {
         for y in 0..<GRID_HEIGHT {
             size := y * GRID_WIDTH + x
             if grid[size] == 1 {
-                autotile := get_autotile_bit(x, y, 1, grid)
+                autotile := get_8bit_autotile_bit(x, y, 1, grid)
                 BIT_GRID[size] = autotile
             } else {
                 BIT_GRID[size] = 0
@@ -74,7 +74,39 @@ create_bit_mask :: proc(grid: ^[]int) {
     }
 }
 
-select_tile_type :: proc(x, y, bitmask: int) -> [2]int {
+get_4bit_autotile_bit :: proc(x,y, tile_num: int, grid: ^[]int) -> int {
+    bitmasks := [4]int{0,0,0,0}
+
+    if get_tile(x,y-1, grid) == tile_num {
+        bitmasks[0] = 1
+    }
+    if get_tile(x+1,y, grid) == tile_num {
+        bitmasks[1] = 2
+    }
+    if get_tile(x,y+1, grid) == tile_num {
+        bitmasks[2] = 4
+    }
+    if get_tile(x-1,y, grid) == tile_num {
+        bitmasks[3] = 8
+    }
+    return bitmasks[0] + bitmasks[1] + bitmasks[2] + bitmasks[3]
+}
+
+create_4bit_mask :: proc(grid: ^[]int) {
+    for x in 0..<GRID_WIDTH {
+        for y in 0..<GRID_HEIGHT {
+            size := y * GRID_WIDTH + x
+            if grid[size] == 1 {
+                autotile := get_4bit_autotile_bit(x, y, 1, grid)
+                BIT_GRID[size] = autotile
+            } else {
+                BIT_GRID[size] = 0
+            }
+        }
+    }
+}
+
+select_tile_type_8bit :: proc(x, y, bitmask: int) -> [2]int {
     switch bitmask {
         case 4:
             return [2]int{1,0}
@@ -173,6 +205,42 @@ select_tile_type :: proc(x, y, bitmask: int) -> [2]int {
         fmt.println(bitmask)
     }
     return [2]int{0,0}
+}
+
+select_tile_type_4bit :: proc(x, y, bitmask: int) -> [2]int {
+    switch bitmask {
+        case 4:
+            return [2]int{0,0}
+        case 6:
+            return [2]int{1,0}
+        case 14:
+            return [2]int{2,0}
+        case 12:
+            return [2]int{3,0}
+        case 5:
+            return [2]int{0,1}
+        case 7:
+            return [2]int{1,1}
+        case 15:
+            return [2]int{2,1}
+        case 13:
+            return [2]int{3,1}
+        case 1:
+            return [2]int{0,2}
+        case 3:
+            return [2]int{1,2}
+        case 11:
+            return [2]int{2,2}
+        case 9:
+            return [2]int{3,2}
+        case 2:
+            return [2]int{1,3}
+        case 10:
+            return [2]int{2,3}
+        case 8:
+            return [2]int{3,3}
+    }
+    return [2]int{0,3}
 }
 
 initialise_bit_level :: proc(width, height: int) {
