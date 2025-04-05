@@ -74,7 +74,7 @@ main :: proc() {
     rl.InitWindow(1600, 1600, "AutoTile")
     rl.SetTargetFPS(60)
 
-    TEXTURE = rl.LoadTexture("wangbl.png")
+    TEXTURE = rl.LoadTexture("wang2e.png")
 
     grid_width := 50
     grid_height := 50
@@ -83,7 +83,7 @@ main :: proc() {
     defer delete(grid)
 
     auto.initialise_bit_level(50, 50)
-    auto.create_bit_mask(&grid)
+    auto.create_4bit_mask(&grid)
 
 
     for !rl.WindowShouldClose() {
@@ -94,7 +94,7 @@ main :: proc() {
             for y in 0..<grid_height {
                 size := y * grid_width + x
                 value := grid[size]
-                pos := auto.select_tile_type(x, y, auto.BIT_GRID[size])
+                pos := auto.select_tile_type_4bit(x, y, auto.BIT_GRID[size])
                 render_texture(x,y, pos)
             }
         }
