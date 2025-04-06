@@ -129,12 +129,12 @@ get_autotile_bit :: proc(x,y, tile_num: int, grid: ^[]int) -> int {
     }
 }
 
-create_bit_mask :: proc(grid: ^[]int) {
+create_bit_mask :: proc(grid: ^[]int, key: int) {
     for x in 0..<GRID_WIDTH {
         for y in 0..<GRID_HEIGHT {
             size := y * GRID_WIDTH + x
-            if TILE_TYPE == .wang_corner || grid[size] == 1 {
-                autotile := get_autotile_bit(x, y, 1, grid)
+            if TILE_TYPE == .wang_corner || grid[size] == key {
+                autotile := get_autotile_bit(x, y, key, grid)
                 BIT_GRID[size] = autotile
             } else {
                 BIT_GRID[size] = 0
@@ -144,7 +144,7 @@ create_bit_mask :: proc(grid: ^[]int) {
 }
 
 
-select_tile_type :: proc(x, y, bitmask: int) -> [2]int {
+select_tile_type :: proc(bitmask: int) -> [2]int {
     if TILE_TYPE == .wang_edge {
         switch bitmask {
             case 4:
