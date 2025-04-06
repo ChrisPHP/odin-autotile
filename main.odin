@@ -82,8 +82,8 @@ main :: proc() {
     grid := gen_map(grid_width,grid_height)
     defer delete(grid)
 
-    auto.initialise_bit_level(50, 50)
-    auto.create_4bit_mask(&grid)
+    auto.initialise_bit_level(50, 50, .wang_edge)
+    auto.create_bit_mask(&grid)
 
 
     for !rl.WindowShouldClose() {
@@ -94,15 +94,17 @@ main :: proc() {
             for y in 0..<grid_height {
                 size := y * grid_width + x
                 value := grid[size]
-                pos := auto.select_tile_type_4bit(x, y, auto.BIT_GRID[size])
+                pos := auto.select_tile_type(x, y, auto.BIT_GRID[size])
                 render_texture(x,y, pos)
             }
         }
 
         rl.EndDrawing()
     }
-
+    
+    rl.UnloadTexture(TEXTURE)
     rl.CloseWindow()
+
 
     auto.clear_grid_memory()
 }
