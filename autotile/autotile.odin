@@ -143,6 +143,29 @@ create_bit_mask :: proc(grid: ^[]int, key: int) {
     }
 }
 
+create_bit_mask_test :: proc(grid: ^[]int, key: int) -> []int {
+    bit_grid := make([]int, GRID_WIDTH*GRID_HEIGHT)
+
+    for x in 0..<GRID_WIDTH {
+        for y in 0..<GRID_HEIGHT {
+            size := y * GRID_WIDTH + x
+            if TILE_TYPE == .wang_corner || grid[size] == key {
+                autotile := get_autotile_bit(x, y, key, grid)
+                bit_grid[size] = autotile
+            } else {
+                bit_grid[size] = 0
+            }
+        }
+    }
+
+    return bit_grid
+}
+
+create_bitmask_textures :: proc(texture: cstring, keys: []int, cell_size: i32) {
+    for key in keys {
+        
+    }
+}
 
 select_tile_type :: proc(bitmask: int) -> [2]int {
     if TILE_TYPE == .wang_edge {
