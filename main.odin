@@ -74,7 +74,7 @@ main :: proc() {
     rl.InitWindow(1600, 1600, "AutoTile")
     rl.SetTargetFPS(60)
 
-    TEXTURE = rl.LoadTexture("later_test.png")
+    TEXTURE = rl.LoadTexture("wang2e.png")
    
     grid_width := 50
     grid_height := 50
@@ -82,9 +82,11 @@ main :: proc() {
     grid := gen_map(grid_width,grid_height)
     defer delete(grid)
 
-    auto.initialise_bit_level(50, 50, .wang_corner)
+    auto.initialise_bit_level(50, 50, .wang_edge)
     auto.create_bit_mask(&grid, 1)
+    //auto.generate_all_tile_combos("roof_trims.png", [][2]int{{0,0}, {4,0}}, 32, 4)
 
+    auto.create_bitmask_textures("composite_test.png", [][3]int{{0,0,0}, {1,4,0}}, 32, &grid, 4)
 
     for !rl.WindowShouldClose() {
         rl.BeginDrawing()
@@ -95,9 +97,7 @@ main :: proc() {
                 size := y * grid_width + x
                 value := auto.BIT_GRID[size]
                 pos := auto.select_tile_type(value)
-                pos_x := pos[0] + 4
-                pos_y := pos[1] + 0
-                render_texture(x,y, [2]int{pos_x, pos_y})
+                render_texture(x,y, pos)
             }
         }
 

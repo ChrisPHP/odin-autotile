@@ -1,6 +1,7 @@
 package autotile
 
 import "core:fmt"
+import rl "vendor:raylib"
 
 Tile_Type :: enum {
     blob,
@@ -149,22 +150,114 @@ create_bit_mask_test :: proc(grid: ^[]int, key: int) -> []int {
     for x in 0..<GRID_WIDTH {
         for y in 0..<GRID_HEIGHT {
             size := y * GRID_WIDTH + x
-            if TILE_TYPE == .wang_corner || grid[size] == key {
-                autotile := get_autotile_bit(x, y, key, grid)
-                bit_grid[size] = autotile
-            } else {
-                bit_grid[size] = 0
-            }
+            autotile := get_autotile_bit(x, y, key, grid)
+            bit_grid[size] = autotile
         }
     }
 
     return bit_grid
 }
 
-create_bitmask_textures :: proc(texture: cstring, keys: []int, cell_size: i32) {
-    for key in keys {
-        
+create_bitmask_textures :: proc(texture: cstring, keys: [][3]int, cell_size: i32, grid: ^[]int, start_row: i32) {
+    bit_values := make([][]int, len(keys))
+    defer delete(bit_values)
+    combos: [dynamic][3]int
+    defer delete(combos)
+
+    for key, index in keys {
+        bit_values[index] = create_bit_mask_test(grid, key[0])
     }
+
+    texture_image := rl.LoadImage(texture)
+    defer rl.UnloadImage(texture_image)
+    
+    canvas := rl.GenImageColor(texture_image.width, texture_image.height*10, rl.BLANK)
+    defer rl.UnloadImage(canvas)
+
+    rl.ImageDraw(&canvas, texture_image, 
+        rl.Rectangle{0, 0, f32(texture_image.width), f32(texture_image.height)},
+        rl.Rectangle{0, 0, f32(texture_image.width), f32(texture_image.height)},
+        rl.WHITE
+    )
+
+    used_positions: [dynamic][2]int
+    col_amount := texture_image.width/cell_size
+    cur_col :i32= 0
+    cur_row :i32= start_row
+
+    for i in 0..<len(bit_values)-1 {
+        for bit, index in bit_values[i] {
+            bit2 := bit_values[i+1][index]
+            if bit != 0 && bit2 != 0 && bit != 15 && bit2 != 15 {
+                if bit == bit2 {
+                    continue
+                }
+
+                exists := false
+                for c in combos {
+                    if c[0] == i+1 && c[1] == bit && c[2] == bit2 {
+                        exists = true
+                        break
+                    }
+                } 
+
+                if exists {
+                    continue
+                }
+                p1 := select_tile_type(bit)
+                t1_pos := [2]int{p1[0]+keys[i][1], p1[1]+keys[i][2]}
+                source_rect1 := rl.Rectangle{
+                    x=f32(t1_pos[0]*32),
+                    y=f32(t1_pos[1]*32),
+                    width=32,
+                    height=32
+                }
+
+                p2 := select_tile_type(bit2)
+                t2_pos := [2]int{p2[0]+keys[i+1][1], p1[1]+keys[i+1][2]}
+                source_rect2 := rl.Rectangle{
+                    x=f32(t2_pos[0]*32),
+                    y=f32(t2_pos[1]*32),
+                    width=32,
+                    height=32
+                }
+
+                dest_position := [2]f32{
+                    f32(cur_col*cell_size),
+                    f32(cur_row*cell_size)
+                }
+
+                portion1 := rl.ImageFromImage(texture_image, source_rect1)
+                portion2 := rl.ImageFromImage(texture_image, source_rect2)
+                rl.ImageDraw(&canvas, portion2, rl.Rectangle{0,0,f32(portion2.width), f32(portion2.height)},
+                    rl.Rectangle{dest_position.x, dest_position.y, f32(portion2.width), f32(portion2.height)},
+                    rl.WHITE
+                )
+                rl.ImageDraw(&canvas, portion1, rl.Rectangle{0,0,f32(portion1.width), f32(portion1.height)},
+                    rl.Rectangle{dest_position.x, dest_position.y, f32(portion1.width), f32(portion1.height)},
+                    rl.WHITE
+                )
+                rl.UnloadImage(portion1)
+                rl.UnloadImage(portion2)
+
+                if cur_col > col_amount {
+                    cur_col = 0
+                    cur_row += 1
+                } else {
+                    cur_col += 1
+                }
+
+                append(&combos, [3]int{i+1, bit, bit2})
+            }
+        }
+        clear(&combos)
+    }
+
+    for b in bit_values {
+        delete(b)
+    }
+
+    rl.ExportImage(canvas, "extended_transparent_image.png")
 }
 
 select_tile_type :: proc(bitmask: int) -> [2]int {
