@@ -9,10 +9,17 @@ Tile_Type :: enum {
     wang_corner
 }
 
+Layer_Struct :: struct {
+    key: int,
+    bit: int
+}
 
 GRID_WIDTH := 0
 GRID_HEIGHT := 0
+
 BIT_GRID: []int
+BIT_GRID_LAYERS: [][]Layer_Struct
+
 TILE_TYPE := Tile_Type.blob
 
 get_tile :: proc(x, y: int, grid: ^[]int) -> int {
@@ -139,6 +146,38 @@ create_bit_mask :: proc(grid: ^[]int, key: int) {
                 BIT_GRID[size] = autotile
             } else {
                 BIT_GRID[size] = 0
+            }
+        }
+    }
+}
+
+create_bitmask_layered :: proc(grid: ^[]int, keys: []int) {
+    for key in keys {
+        for x in 0..<GRID_WIDTH {
+            for y in 0..<GRID_HEIGHT {
+                size := y * GRID_WIDTH + x
+                autotile := get_autotile_bit(x, y, key, grid)
+
+                length := len(BIT_GRID_LAYERS[size])
+                if autotile != 0 {
+                    if length == 0 {
+                        BIT_GRID_LAYERS[size] = make([]Layer_Struct, 1)
+                        BIT_GRID_LAYERS[size][0] = Layer_Struct{
+                            key=key,
+                            bit=autotile
+                        }
+                    }
+                    new := make([]Layer_Struct, length+1)
+                    copy(new, BIT_GRID_LAYERS[size][:])
+                    new[length] = Layer_Struct{
+                        key=key,
+                        bit=autotile
+                    }
+                    delete(BIT_GRID_LAYERS[size])
+                    BIT_GRID_LAYERS[size] = make([]Layer_Struct, length+1)
+                    copy(BIT_GRID_LAYERS[size], new[:])
+                    delete(new)
+                }
             }
         }
     }
@@ -432,9 +471,15 @@ initialise_bit_level :: proc(width, height: int, type: Tile_Type) {
     GRID_WIDTH = width
     GRID_HEIGHT = height
     BIT_GRID = make([]int, width*height)
+    BIT_GRID_LAYERS = make([][]Layer_Struct, width*height)
     TILE_TYPE = type
 }
 
 clear_grid_memory :: proc() {
     delete(BIT_GRID)
+
+    for bit in BIT_GRID_LAYERS {
+        delete(bit)
+    }
+    delete(BIT_GRID_LAYERS)
 }
