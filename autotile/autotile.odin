@@ -152,11 +152,23 @@ create_bit_mask :: proc(grid: ^[]int, key: int) {
 }
 
 create_bitmask_layered :: proc(grid: ^[]int, keys: []int) {
-    for key in keys {
+    next_grid_gen := make([]int, GRID_WIDTH*GRID_HEIGHT)
+    defer delete(next_grid_gen)
+
+    for key, index in keys {
         for x in 0..<GRID_WIDTH {
             for y in 0..<GRID_HEIGHT {
                 size := y * GRID_WIDTH + x
-                autotile := get_autotile_bit(x, y, key, grid)
+                autotile := 0
+                if TILE_TYPE == .wang_corner || grid[size] == key {
+                    autotile = get_autotile_bit(x, y, key, grid)
+                }
+
+                if autotile != 15 && autotile != 0 {
+                    next_grid_gen[size] = 1
+                } else {
+                    next_grid_gen[size] = grid[size]
+                }
 
                 length := len(BIT_GRID_LAYERS[size])
                 if autotile != 0 {
