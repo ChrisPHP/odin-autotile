@@ -151,23 +151,39 @@ create_bit_mask :: proc(grid: ^[]int, key: int) {
     }
 }
 
+get_autotile_bit_marching :: proc(x,y, tile_num: int, grid: ^[]int) -> int {
+    bitmasks := [4]int{0,0,0,0}
+    
+    if get_tile(x,y, grid) == tile_num {
+        bitmasks[0] = 8
+    }
+    if get_tile(x+1, y, grid) == tile_num {
+        bitmasks[1] = 1
+    }
+    if get_tile(x+1, y+1, grid) == tile_num {
+        bitmasks[2] = 2
+    }
+    if get_tile(x, y+1, grid) == tile_num {
+        bitmasks[3] = 4
+    }
+
+    return bitmasks[0] + bitmasks[1] + bitmasks[2] + bitmasks[3]
+}
+
 create_bitmask_layered :: proc(grid: ^[]int, keys: []int) {
     next_grid_gen := make([]int, GRID_WIDTH*GRID_HEIGHT)
     defer delete(next_grid_gen)
 
-    for key, index in keys {
-        for x in 0..<GRID_WIDTH {
-            for y in 0..<GRID_HEIGHT {
+
+    for x in 0..<GRID_WIDTH {
+        for y in 0..<GRID_HEIGHT {
+            for key, index in keys {
                 size := y * GRID_WIDTH + x
                 autotile := 0
-                if TILE_TYPE == .wang_corner || grid[size] == key {
-                    autotile = get_autotile_bit(x, y, key, grid)
-                }
-
-                if autotile != 15 && autotile != 0 {
-                    next_grid_gen[size] = 1
-                } else {
-                    next_grid_gen[size] = grid[size]
+                if TILE_TYPE == .wang_corner {
+                    autotile = get_autotile_bit_marching(x, y, key, grid)
+                } else if grid[size] == key {
+                    autotile = get_autotile_bit(x, y, key, grid) 
                 }
 
                 length := len(BIT_GRID_LAYERS[size])
@@ -178,17 +194,18 @@ create_bitmask_layered :: proc(grid: ^[]int, keys: []int) {
                             key=key,
                             bit=autotile
                         }
+                    } else {
+                        new := make([]Layer_Struct, length+1)
+                        copy(new, BIT_GRID_LAYERS[size][:])
+                        new[length] = Layer_Struct{
+                            key=key,
+                            bit=autotile
+                        }
+                        delete(BIT_GRID_LAYERS[size])
+                        BIT_GRID_LAYERS[size] = make([]Layer_Struct, length+1)
+                        copy(BIT_GRID_LAYERS[size], new[:])
+                        delete(new)
                     }
-                    new := make([]Layer_Struct, length+1)
-                    copy(new, BIT_GRID_LAYERS[size][:])
-                    new[length] = Layer_Struct{
-                        key=key,
-                        bit=autotile
-                    }
-                    delete(BIT_GRID_LAYERS[size])
-                    BIT_GRID_LAYERS[size] = make([]Layer_Struct, length+1)
-                    copy(BIT_GRID_LAYERS[size], new[:])
-                    delete(new)
                 }
             }
         }

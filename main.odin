@@ -35,10 +35,12 @@ gen_map :: proc(width, height: int) -> []int {
         for y in 0..<height {
             noise_value := gen_noise_map(0.2, 5, 2, 0.5, 4, seed, {x, y})
             size := y * width + x
-            if noise_value < 0 {
+            if noise_value <= -0.5 {
                 grid[size] = 0
-            } else {
+            } else if noise_value > -0.5 && noise_value < 0.3 {
                 grid[size] = 1
+            } else {
+                grid[size] = 2
             }
         }
     }
@@ -74,7 +76,7 @@ main :: proc() {
     rl.InitWindow(1600, 1600, "AutoTile")
     rl.SetTargetFPS(60)
 
-    TEXTURE = rl.LoadTexture("composite_test.png")
+    TEXTURE = rl.LoadTexture("rock_grass.png")
    
     grid_width := 50
     grid_height := 50
@@ -82,10 +84,8 @@ main :: proc() {
     grid := gen_map(grid_width,grid_height)
     defer delete(grid)
 
-    auto.initialise_bit_level(50, 50, .wang_edge)
-    auto.create_bit_mask(&grid, 1)
-    
-    auto.create_bitmask_layered(&grid, []int{0, 1})
+    auto.initialise_bit_level(50, 50, .wang_corner)    
+    auto.create_bitmask_layered(&grid, []int{0, 1, 2})
 
     for !rl.WindowShouldClose() {
         rl.BeginDrawing()
@@ -93,19 +93,16 @@ main :: proc() {
 
         for x in 0..<grid_width {
             for y in 0..<grid_height {
-                size := y * grid_width + x
-                /*
-                autotile := auto.BIT_GRID[size]
-                pos := auto.select_tile_type(autotile)
-                render_texture(x,y, pos)
-                */
+                size := y * grid_width + x                
                 
                 for tile in auto.BIT_GRID_LAYERS[size] {
                     value := tile.key
                     autotile := tile.bit
                     pos := auto.select_tile_type(autotile)
-                    if value == 1 {
+                    if value == 0 {
                         pos[0] += 4
+                    } else if value == 2 {
+                        pos[1] += 4
                     }
                     render_texture(x,y, pos)
                 }
