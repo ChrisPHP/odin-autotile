@@ -12,6 +12,7 @@ import auto "autotile"
 CELL_SIZE :: 32
 TEXTURE: rl.Texture
 
+
 gen_noise_map :: proc(baseFrequency: f64, cellSize: f64, octaves: i8, persistance: f64, lacunarity: f64, seed: i64, coords: [2]int) -> f32 {
     totalNoise: f32
     frequency: f64 = baseFrequency / cellSize
@@ -84,8 +85,11 @@ main :: proc() {
     grid := gen_map(grid_width,grid_height)
     defer delete(grid)
 
-    auto.initialise_bit_level(50, 50, .wang_corner)    
-    auto.create_bitmask_layered(&grid, []int{0, 1, 2})
+    auto.initialise_bit_level(grid_width, grid_height, .wang_corner)    
+    new_grid := auto.create_bitmask_layered(&grid, []int{0, 1, 2})
+
+    tile_locations := [3][2]int{{4,0},{0,0},{0,4}}
+
 
     for !rl.WindowShouldClose() {
         rl.BeginDrawing()
@@ -95,15 +99,11 @@ main :: proc() {
             for y in 0..<grid_height {
                 size := y * grid_width + x                
                 
-                for tile in auto.BIT_GRID_LAYERS[size] {
+                for tile in new_grid[size] {
                     value := tile.key
                     autotile := tile.bit
                     pos := auto.select_tile_type(autotile)
-                    if value == 0 {
-                        pos[0] += 4
-                    } else if value == 2 {
-                        pos[1] += 4
-                    }
+                    pos += tile_locations[value]
                     render_texture(x,y, pos)
                 }
                 
@@ -113,9 +113,11 @@ main :: proc() {
         rl.EndDrawing()
     }
 
+    for g in new_grid {
+        delete(g)
+    }
+    delete(new_grid)
+
     rl.UnloadTexture(TEXTURE)
     rl.CloseWindow()
-
-
-    auto.clear_grid_memory()
 }
