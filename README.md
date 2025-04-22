@@ -44,3 +44,6 @@ for x in 0..<grid_width {
 }
 
 ```
+
+art used from opengameart:
+https://opengameart.org/content/lpc-terrains
