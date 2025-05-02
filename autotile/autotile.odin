@@ -17,8 +17,6 @@ Layer_Struct :: struct {
 GRID_WIDTH := 0
 GRID_HEIGHT := 0
 
-TILE_TYPE := Tile_Type.blob
-
 get_tile :: proc(x, y: int, grid: ^[]int) -> int {
     if x < 0 || y < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT {
         return 0
@@ -28,8 +26,8 @@ get_tile :: proc(x, y: int, grid: ^[]int) -> int {
 }
 
 
-get_autotile_bit :: proc(x,y, tile_num: int, grid: ^[]int) -> int {
-    if TILE_TYPE == .wang_edge {
+get_autotile_bit :: proc(x,y, tile_num: int, grid: ^[]int, type: Tile_Type) -> int {
+    if type == .wang_edge {
         bitmasks := [4]int{0,0,0,0}
 
         if get_tile(x,y-1, grid) == tile_num {
@@ -45,7 +43,7 @@ get_autotile_bit :: proc(x,y, tile_num: int, grid: ^[]int) -> int {
             bitmasks[3] = 8
         }
         return bitmasks[0] + bitmasks[1] + bitmasks[2] + bitmasks[3]
-    } else if TILE_TYPE == .wang_corner {
+    } else if type == .wang_corner {
         bitmasks := [4]int{0,0,0,0}
         if get_tile(x,y, grid) == tile_num {
             if get_tile(x+1,y-1, grid) == tile_num {
@@ -134,14 +132,17 @@ get_autotile_bit :: proc(x,y, tile_num: int, grid: ^[]int) -> int {
     }
 }
 
-create_bit_mask :: proc(grid: ^[]int, key: int) -> []int {
+create_bit_mask :: proc(grid: ^[]int, key: int, type: Tile_Type) -> []int {
     bit_grid := make([]int, GRID_WIDTH*GRID_HEIGHT)
 
     for x in 0..<GRID_WIDTH {
         for y in 0..<GRID_HEIGHT {
             size := y * GRID_WIDTH + x
-            if TILE_TYPE == .wang_corner || grid[size] == key {
-                autotile := get_autotile_bit(x, y, key, grid)
+            if type == .wang_corner {
+                autotile := get_autotile_bit_marching(x, y, key, grid)
+                bit_grid[size] = autotile
+            } else if type == .wang_corner || grid[size] == key {
+                autotile := get_autotile_bit(x, y, key, grid, type) 
                 bit_grid[size] = autotile
             } else {
                 bit_grid[size] = 0
@@ -171,7 +172,7 @@ get_autotile_bit_marching :: proc(x,y, tile_num: int, grid: ^[]int) -> int {
     return bitmasks[0] + bitmasks[1] + bitmasks[2] + bitmasks[3]
 }
 
-create_bitmask_layered :: proc(grid: ^[]int, keys: []int) -> [][]Layer_Struct {
+create_bitmask_layered :: proc(grid: ^[]int, keys: []int, type: Tile_Type) -> [][]Layer_Struct {
     bit_grid := make([][]Layer_Struct, GRID_WIDTH*GRID_HEIGHT)
     
     for x in 0..<GRID_WIDTH {
@@ -179,10 +180,10 @@ create_bitmask_layered :: proc(grid: ^[]int, keys: []int) -> [][]Layer_Struct {
             for key, index in keys {
                 size := y * GRID_WIDTH + x
                 autotile := 0
-                if TILE_TYPE == .wang_corner {
+                if type == .wang_corner {
                     autotile = get_autotile_bit_marching(x, y, key, grid)
                 } else if grid[size] == key {
-                    autotile = get_autotile_bit(x, y, key, grid) 
+                    autotile = get_autotile_bit(x, y, key, grid, type) 
                 }
 
                 length := len(bit_grid[size])
@@ -214,20 +215,6 @@ create_bitmask_layered :: proc(grid: ^[]int, keys: []int) -> [][]Layer_Struct {
     return bit_grid
 }
 
-create_bit_mask_test :: proc(grid: ^[]int, key: int) -> []int {
-    bit_grid := make([]int, GRID_WIDTH*GRID_HEIGHT)
-
-    for x in 0..<GRID_WIDTH {
-        for y in 0..<GRID_HEIGHT {
-            size := y * GRID_WIDTH + x
-            autotile := get_autotile_bit(x, y, key, grid)
-            bit_grid[size] = autotile
-        }
-    }
-
-    return bit_grid
-}
-
 create_bitmask_textures :: proc(texture: cstring, keys: [][3]int, cell_size: i32, grid: ^[]int, start_row: i32) {
     bit_values := make([][]int, len(keys))
     defer delete(bit_values)
@@ -235,7 +222,7 @@ create_bitmask_textures :: proc(texture: cstring, keys: [][3]int, cell_size: i32
     defer delete(combos)
 
     for key, index in keys {
-        bit_values[index] = create_bit_mask_test(grid, key[0])
+        bit_values[index] = create_bit_mask(grid, key[0], .wang_corner)
     }
 
     texture_image := rl.LoadImage(texture)
@@ -274,7 +261,7 @@ create_bitmask_textures :: proc(texture: cstring, keys: [][3]int, cell_size: i32
                 if exists {
                     continue
                 }
-                p1 := select_tile_type(bit)
+                p1 := select_tile_type(bit, .wang_corner)
                 t1_pos := [2]int{p1[0]+keys[i][1], p1[1]+keys[i][2]}
                 source_rect1 := rl.Rectangle{
                     x=f32(t1_pos[0]*32),
@@ -283,7 +270,7 @@ create_bitmask_textures :: proc(texture: cstring, keys: [][3]int, cell_size: i32
                     height=32
                 }
 
-                p2 := select_tile_type(bit2)
+                p2 := select_tile_type(bit2, .wang_corner)
                 t2_pos := [2]int{p2[0]+keys[i+1][1], p1[1]+keys[i+1][2]}
                 source_rect2 := rl.Rectangle{
                     x=f32(t2_pos[0]*32),
@@ -330,8 +317,8 @@ create_bitmask_textures :: proc(texture: cstring, keys: [][3]int, cell_size: i32
     rl.ExportImage(canvas, "extended_transparent_image.png")
 }
 
-select_tile_type :: proc(bitmask: int) -> [2]int {
-    if TILE_TYPE == .wang_edge {
+select_tile_type :: proc(bitmask: int, type: Tile_Type) -> [2]int {
+    if type == .wang_edge {
         switch bitmask {
             case 4:
                 return [2]int{0,0}
@@ -365,7 +352,7 @@ select_tile_type :: proc(bitmask: int) -> [2]int {
                 return [2]int{3,3}
         }
         return [2]int{0,3}
-    } else if TILE_TYPE == .wang_corner {
+    } else if type == .wang_corner {
         switch bitmask {
             case 4:
                 return [2]int{0,0}
@@ -498,8 +485,7 @@ select_tile_type :: proc(bitmask: int) -> [2]int {
     }
 }
 
-initialise_bit_level :: proc(width, height: int, type: Tile_Type) {
+initialise_bit_level :: proc(width, height: int) {
     GRID_WIDTH = width
     GRID_HEIGHT = height
-    TILE_TYPE = type
 }

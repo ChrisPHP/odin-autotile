@@ -77,7 +77,7 @@ main :: proc() {
     rl.InitWindow(1600, 1600, "AutoTile")
     rl.SetTargetFPS(60)
 
-    TEXTURE = rl.LoadTexture("rock_grass.png")
+    TEXTURE = rl.LoadTexture("wang2c.png")
    
     grid_width := 50
     grid_height := 50
@@ -85,8 +85,8 @@ main :: proc() {
     grid := gen_map(grid_width,grid_height)
     defer delete(grid)
 
-    auto.initialise_bit_level(grid_width, grid_height, .wang_corner)    
-    new_grid := auto.create_bitmask_layered(&grid, []int{0, 1, 2})
+    auto.initialise_bit_level(grid_width, grid_height)    
+    new_grid := auto.create_bitmask_layered(&grid, []int{0, 1, 2}, .wang_corner)
 
     tile_locations := [3][2]int{{4,0},{0,0},{0,4}}
 
@@ -102,7 +102,7 @@ main :: proc() {
                 for tile in new_grid[size] {
                     value := tile.key
                     autotile := tile.bit
-                    pos := auto.select_tile_type(autotile)
+                    pos := auto.select_tile_type(autotile, .wang_corner)
                     pos += tile_locations[value]
                     render_texture(x,y, pos)
                 }
